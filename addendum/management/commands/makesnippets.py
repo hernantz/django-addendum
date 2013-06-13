@@ -2,18 +2,23 @@ import os
 import re
 
 from django.core.management.base import BaseCommand, CommandError
+from django.template import Template
 from django.conf import settings
 
 from addendum.models import Snippet
+from addendum.templatetags.addendum_tags import SnippetNode
 
 
 IS_ADDENDUM = r'\{\% load addendum_tags \%\}'
-SNIPPET_PATTERNS = (
-    re.compile(r"""\{\% snippet \'(?P<name>\w*:\w*)\' \%\}(?P<content>.*)\{\% endsnippet \%\}""", re.UNICODE),
-    re.compile(r"""\{\%snippet \'(?P<name>\w*:\w*)\' \%\}(?P<content>.*)\{\% endsnippet\%\}""", re.UNICODE),
-    re.compile(r"""\{\% snippet (?P<name>\w*) \%\}(?P<content>.*)\{\% endsnippet \%\}""", re.UNICODE),
-    re.compile(r"""\{\%snippet (?P<name>\w*) \%\}(?P<content>.*)\{\% endsnippet\%\}""", re.UNICODE),
-)
+
+
+def search_snippet_nodes(template_string):
+    """
+    Given a valid django template string,
+    compiles it and extracts all SnippetNode nodes
+    """
+    t = Template(template_string)
+    return [node for node in t.nodelist if isinstance(node, SnippetNode)]
 
 
 class Command(BaseCommand):
@@ -35,10 +40,15 @@ class Command(BaseCommand):
             # check if the template loads addendum
             is_addendum = re.search(IS_ADDENDUM, data)
             if is_addendum:
-                for pattern in SNIPPET_PATTERNS:
-                    snips = [m.groupdict() for m in pattern.finditer(data)]
-                    if snips:
-                        self.founds += snips
+                snippets = search_snippet_nodes(data)
+                self.parse_snippets(snippets)
+
+    def parse_snippets(self, snippets):
+        for s in snippets:
+            self.founds.append({
+                'name': s.key.var,
+                'content': s.render({})
+            })
 
     def handle_results(self):
         for snip in self.founds:
