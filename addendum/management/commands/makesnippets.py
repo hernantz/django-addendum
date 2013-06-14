@@ -51,7 +51,7 @@ class Command(BaseCommand):
 
     def parse_snippets(self, snippets):
         for s in snippets:
-            self.founds.append({'name': s.key.var, 'content': s.render({})})
+            self.founds.append({'name': s.key.literal, 'content': s.render({})})
 
     def handle_results(self):
         for snip in self.founds:
