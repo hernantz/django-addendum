@@ -59,7 +59,7 @@ class Command(BaseCommand):
                 key=snip['name'],
                 defaults={'text': snip['content']}
             )
-            print("Snippet found: {}".format(snip.name))
+            print("Snippet found: {}".format(snip.key))
 
     def handle(self, *args, **options):
         self.founds = []  # list for storing re.matches
