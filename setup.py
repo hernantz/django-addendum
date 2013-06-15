@@ -8,7 +8,7 @@ with open('README.rst') as f:
 
 setup(
     name='django-addendum',
-    version='0.1.0',
+    version='0.1.1',
     description='Simple template-based content swapping for CMS-less sites',
     long_description=readme,
     author='Ben Lopatin',
