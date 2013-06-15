@@ -52,8 +52,12 @@ def search_snippet_nodes(template_string):
 class Command(BaseCommand):
     help = 'Creates snippet instances from templates'
 
+    def __init__(self, *args, **kwargs):
+        self.found = []  # list for storing re.matches
+        super(Command, self).__init__(*args, **kwargs)
+
     def search_files(self):
-        for data in  get_addendum_templates():
+        for data in get_addendum_templates():
             # check if the template loads addendum
             if is_addendum(data):
                 snippets = search_snippet_nodes(data)
@@ -61,10 +65,10 @@ class Command(BaseCommand):
 
     def parse_snippets(self, snippets):
         for s in snippets:
-            self.founds.append({'name': s.key.literal, 'content': s.render({})})
+            self.found.append({'name': s.key.literal, 'content': s.render({})})
 
     def handle_results(self):
-        for snip in self.founds:
+        for snip in self.found:
             snip, created = Snippet.objects.get_or_create(
                 key=snip['name'],
                 defaults={'text': snip['content']}
@@ -72,6 +76,5 @@ class Command(BaseCommand):
             print("Snippet found: {}".format(snip.key))
 
     def handle(self, *args, **options):
-        self.founds = []  # list for storing re.matches
         self.search_files()
         self.handle_results()
