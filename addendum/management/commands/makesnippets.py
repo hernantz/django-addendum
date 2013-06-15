@@ -8,13 +8,36 @@ from django.conf import settings
 
 from addendum.models import Snippet
 from addendum.templatetags.addendum_tags import SnippetNode
+from django.template.loaders.app_directories import app_template_dirs
 
 
 IS_ADDENDUM = r'\{\% load addendum_tags \%\}'
 
 
+def get_addendum_templates():
+    for template in get_all_templates():
+        try:
+            with codecs.open(template, 'r',
+                             settings.DEFAULT_CHARSET) as template:
+                yield template.read()
+        except UnicodeDecodeError:
+            pass
+
+
+def is_addendum(template_string):
+    """Checks if the template_string loads the addendum tags"""
+    return re.search(IS_ADDENDUM, template_string)
+
+
 def _get_nodes(template):
     return template.nodelist.get_nodes_by_type(SnippetNode)
+
+
+def get_all_templates():
+    for template_dir in (settings.TEMPLATE_DIRS + app_template_dirs):
+        for dir, dirnames, filenames in os.walk(template_dir):
+            for filename in filenames:
+                yield os.path.join(dir, filename)
 
 
 def search_snippet_nodes(template_string):
@@ -29,23 +52,10 @@ def search_snippet_nodes(template_string):
 class Command(BaseCommand):
     help = 'Creates snippet instances from templates'
 
-    def set_files(self):
-        file_list = []
-        for dr in settings.TEMPLATE_DIRS:
-            for root, subFolders, files in os.walk(dr):
-                for file in files:
-                    file_list.append(os.path.join(root, file))
-        self.files = file_list
-
     def search_files(self):
-        for template in self.files:
-            with codecs.open(template, 'r',
-                             settings.DEFAULT_CHARSET) as template:
-                data = template.read()
-
+        for data in  get_addendum_templates():
             # check if the template loads addendum
-            is_addendum = re.search(IS_ADDENDUM, data)
-            if is_addendum:
+            if is_addendum(data):
                 snippets = search_snippet_nodes(data)
                 self.parse_snippets(snippets)
 
@@ -63,8 +73,5 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.founds = []  # list for storing re.matches
-
-        self.set_files()
         self.search_files()
-
         self.handle_results()
